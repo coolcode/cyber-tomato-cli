@@ -1,5 +1,5 @@
 use std::{
-    io,
+    io::{self, Write},
     time::{Duration, Instant},
 };
 
@@ -47,6 +47,11 @@ struct PomodoroSession {
 
 const HIGHLIGHT_COLOR: Color = Color::Rgb(0, 255, 150);
 const PRIMARY_COLOR: Color = Color::Rgb(144, 255, 161); //Color::Rgb(80,250,123);
+
+fn set_terminal_title(title: &str) {
+    print!("\x1b]0;{}\x07", title);
+    io::stdout().flush().unwrap_or(());
+}
 
 struct PomodoroTimer {
     current_session: PomodoroSession,
@@ -275,6 +280,20 @@ impl PomodoroTimer {
 }
 
 fn ui(f: &mut Frame, timer: &PomodoroTimer) {
+    // Update terminal title with countdown
+    let (elapsed, total) = timer.get_timer_progress();
+    let remaining = if total > elapsed { total - elapsed } else { Duration::from_secs(0) };
+    let remaining_minutes = remaining.as_secs() / 60;
+    let remaining_seconds = remaining.as_secs() % 60;
+    
+    let session_type = match timer.current_session.timer_type {
+        TimerType::Work => "Work",
+        TimerType::Break => "Break",
+    };
+    
+    let title = format!("CYBER TOMATO - {} {:02}:{:02}", session_type, remaining_minutes, remaining_seconds);
+    set_terminal_title(&title);
+
     // If Mario animation is active, show it fullscreen
     if timer.show_mario_animation {
         let mario_canvas = timer.mario_animation.render(f.area());
@@ -540,6 +559,9 @@ fn run_timer() -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
+    
+    // Restore terminal title
+    set_terminal_title("Terminal");
 
     result
 }
