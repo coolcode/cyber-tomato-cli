@@ -1,6 +1,5 @@
 use std::{
     io,
-    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -17,7 +16,6 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, Paragraph},
 };
-use rodio::{OutputStream, Sink};
 
 mod ascii_digits;
 mod audio;
@@ -66,22 +64,6 @@ struct PomodoroTimer {
 
 impl PomodoroTimer {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        // Initialize audio system for notifications
-        let (_stream_handle, sink) = match OutputStream::try_default() {
-            Ok((stream, stream_handle)) => match Sink::try_new(&stream_handle) {
-                Ok(sink) => (Some(Box::new(stream) as Box<dyn std::any::Any>), Some(Arc::new(Mutex::new(sink)))),
-                Err(e) => {
-                    eprintln!("Warning: Could not create audio sink: {e}");
-                    eprintln!("The application will continue but notification sounds may not work.");
-                    (None, None)
-                }
-            },
-            Err(e) => {
-                eprintln!("Warning: Could not initialize audio output: {e}");
-                eprintln!("The application will continue but notification sounds may not work.");
-                (None, None)
-            }
-        };
 
         let current_session = PomodoroSession {
             timer_type: TimerType::Work,
@@ -100,7 +82,7 @@ impl PomodoroTimer {
             custom_input: String::new(),
             show_mario_animation: false,
             mario_animation: MarioAnimation::new(),
-            audio_manager: AudioManager { sink },
+            audio_manager: AudioManager {},
             custom_work_duration: Duration::from_secs(25 * 60),
             custom_break_duration: Duration::from_secs(5 * 60),
         })
@@ -279,7 +261,10 @@ impl PomodoroTimer {
     fn play_notification(&self) {
         match self.current_session.timer_type {
             TimerType::Work => self.audio_manager.play_work_complete_sound(),
-            TimerType::Break => self.audio_manager.play_break_complete_sound(),
+            TimerType::Break => {
+                // Play the combined notification + music sequence for break completion
+                self.audio_manager.play_break_complete_music();
+            }
         }
     }
 
@@ -443,40 +428,40 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
 
     // Custom input dialog
     if timer.show_custom_input {
-        let popup_area = centered_rect(50, 30, f.area());
+        let popup_area = centered_rect(70, 50, f.area());
         f.render_widget(ratatui::widgets::Clear, popup_area);
 
         let input_popup = Paragraph::new(vec![
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "CUSTOM TIMER",
-                Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD),
-            )])
-            .alignment(Alignment::Center),
+            // Line::from(""),
+            // Line::from(vec![Span::styled(
+            //     "CUSTOM TIMER",
+            //     Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD),
+            // )])
+            // .alignment(Alignment::Center),
             Line::from(""),
             Line::from(vec![
-                Span::raw("Format: "),
+                Span::raw("  Format: "),
                 Span::styled("work,break", Style::default().fg(HIGHLIGHT_COLOR)),
                 Span::raw(" or "),
                 Span::styled("work", Style::default().fg(HIGHLIGHT_COLOR)),
             ]),
             Line::from(vec![
-                Span::raw("Examples: "),
+                Span::raw("  Examples: "),
                 Span::styled("30,10", Style::default().fg(HIGHLIGHT_COLOR)),
                 Span::raw(" or "),
                 Span::styled("20", Style::default().fg(HIGHLIGHT_COLOR)),
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::raw("Input: "),
+                Span::raw("  Input: "),
                 Span::styled(&timer.custom_input, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
                 Span::styled("█", Style::default().fg(PRIMARY_COLOR)), // Cursor
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Enter", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("↵", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Confirm | "),
-                Span::styled("Esc", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("X", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Cancel"),
             ]),
         ])
@@ -485,7 +470,8 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             Block::default()
                 .borders(Borders::ALL)
                 .title("Custom Timer")
-                .border_style(Style::default().fg(PRIMARY_COLOR)),
+                .border_style(Style::default().fg(PRIMARY_COLOR))
+                .title_alignment(Alignment::Center),
         );
         f.render_widget(input_popup, popup_area);
     }
@@ -549,11 +535,7 @@ fn run_timer() -> Result<(), Box<dyn std::error::Error>> {
 
     let result = main_loop(&mut terminal, &mut timer);
 
-    // Clean shutdown of audio to prevent warning messages
-    if let Some(ref sink) = timer.audio_manager.sink {
-        let sink = sink.lock().unwrap();
-        sink.stop();
-    }
+    // Audio cleanup is now handled automatically by each individual playback
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
@@ -587,7 +569,7 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                 if timer.show_custom_input {
                     match key {
                         KeyEvent {
-                            code: KeyCode::Esc,
+                            code: KeyCode::Char('x'),
                             modifiers: KeyModifiers::NONE,
                             ..
                         } => {
