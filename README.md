@@ -6,6 +6,9 @@ A minimalist terminal-based pomodoro application built with Rust, featuring ASCI
 ![Terminal](https://img.shields.io/badge/Terminal-UI-green?style=for-the-badge)
 ![Audio](https://img.shields.io/badge/Audio-Enabled-blue?style=for-the-badge)
 
+
+[![asciicast](https://asciinema.org/a/730138.svg)](https://asciinema.org/a/730138)
+
 ## Features
 
 ### Core Timer Functions
@@ -90,7 +93,7 @@ CYBER TOMATO features a clean, bordered interface:
 │     ██████   ██████   ██████    │
 │                                 │
 ├─────────────────────────────────┤
-│ Progress ████████████████░░░ 85% │  ← Progress Bar
+│ ███████████████████████░░░ 85%  │  ← Progress Bar
 ├─────────────────────────────────┤
 │ Mode: Auto | Status: Working    │  ← Status & Help
 │ Done: 5 | X: Help               │
