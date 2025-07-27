@@ -69,7 +69,6 @@ struct PomodoroTimer {
 
 impl PomodoroTimer {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
-
         let current_session = PomodoroSession {
             timer_type: TimerType::Work,
             duration: Duration::from_secs(25 * 60), // 25 minutes
@@ -285,12 +284,12 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
     let remaining = if total > elapsed { total - elapsed } else { Duration::from_secs(0) };
     let remaining_minutes = remaining.as_secs() / 60;
     let remaining_seconds = remaining.as_secs() % 60;
-    
+
     let session_type = match timer.current_session.timer_type {
         TimerType::Work => "Work",
         TimerType::Break => "Break",
     };
-    
+
     let title = format!("CYBER TOMATO - {} {:02}:{:02}", session_type, remaining_minutes, remaining_seconds);
     set_terminal_title(&title);
 
@@ -559,7 +558,7 @@ fn run_timer() -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
-    
+
     // Restore terminal title
     set_terminal_title("Terminal");
 

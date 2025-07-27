@@ -17,7 +17,6 @@ impl AudioManager {
         self.play_audio(&tones);
     }
 
-
     pub fn play_break_complete_music(&self) {
         // Play notification + longer melody as one continuous sequence
         let complete_sequence = [
@@ -27,21 +26,18 @@ impl AudioManager {
             (880.0, Duration::from_millis(150)),
             (1760.0, Duration::from_millis(300)),
             (0.0, Duration::from_millis(300)), // Pause between notification and melody
-            
             // Phrase 1 - Gentle wake-up call
             (523.25, Duration::from_millis(300)), // C5
             (587.33, Duration::from_millis(300)), // D5
             (659.25, Duration::from_millis(300)), // E5
             (698.46, Duration::from_millis(400)), // F5
             (0.0, Duration::from_millis(100)),    // Rest
-            
             // Phrase 2 - Building energy
-            (783.99, Duration::from_millis(300)), // G5
-            (880.00, Duration::from_millis(300)), // A5
-            (987.77, Duration::from_millis(300)), // B5
+            (783.99, Duration::from_millis(300)),  // G5
+            (880.00, Duration::from_millis(300)),  // A5
+            (987.77, Duration::from_millis(300)),  // B5
             (1046.50, Duration::from_millis(500)), // C6
-            (0.0, Duration::from_millis(200)),    // Rest
-            
+            (0.0, Duration::from_millis(200)),     // Rest
             // Phrase 3 - Descending comfort
             (1046.50, Duration::from_millis(250)), // C6
             (987.77, Duration::from_millis(250)),  // B5
@@ -50,11 +46,10 @@ impl AudioManager {
             (698.46, Duration::from_millis(300)),  // F5
             (659.25, Duration::from_millis(400)),  // E5
             (0.0, Duration::from_millis(150)),     // Rest
-            
             // Phrase 4 - Motivational ending
-            (523.25, Duration::from_millis(200)), // C5
-            (659.25, Duration::from_millis(200)), // E5
-            (783.99, Duration::from_millis(200)), // G5
+            (523.25, Duration::from_millis(200)),  // C5
+            (659.25, Duration::from_millis(200)),  // E5
+            (783.99, Duration::from_millis(200)),  // G5
             (1046.50, Duration::from_millis(300)), // C6
             (1174.66, Duration::from_millis(200)), // D6
             (1318.51, Duration::from_millis(600)), // E6 - Final note
@@ -70,9 +65,7 @@ impl AudioManager {
 
                 for (freq, dur) in tones {
                     if *freq == 0.0 {
-                        let silence = rodio::source::Zero::<f32>::new(1, sample_rate)
-                            .take_duration(*dur)
-                            .buffered();
+                        let silence = rodio::source::Zero::<f32>::new(1, sample_rate).take_duration(*dur).buffered();
                         sink.append(silence);
                     } else {
                         let source = SquareWaveWithDecay::new(*freq, *dur, sample_rate);
