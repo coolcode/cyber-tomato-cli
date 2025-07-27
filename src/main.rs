@@ -15,14 +15,16 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Gauge, Paragraph},
 };
 use rodio::{OutputStreamBuilder, Sink};
 
 mod audio;
 mod mario_animation;
+mod ascii_digits;
 use audio::AudioManager;
 use mario_animation::MarioAnimation;
+use ascii_digits::create_time_display_lines;
 
 #[derive(Clone, Debug, PartialEq)]
 enum TimerType {
@@ -52,9 +54,6 @@ struct PomodoroTimer {
     current_session: PomodoroSession,
     mode: TimerMode,
     completed_sessions: u32,
-    selected_index: usize,
-    menu_options: Vec<String>,
-    list_state: ListState,
     show_controls_popup: bool,
     show_custom_input: bool,
     custom_input: String,
@@ -68,9 +67,6 @@ struct PomodoroTimer {
 
 impl PomodoroTimer {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut list_state = ListState::default();
-        list_state.select(Some(0));
-
         // Initialize audio system for notifications
         let (stream_handle, sink) = match OutputStreamBuilder::open_default_stream() {
             Ok(stream_handle) => { 
@@ -84,12 +80,6 @@ impl PomodoroTimer {
             }
         };
 
-        let menu_options = vec![
-            "25 mins Work".to_string(),
-            "5 mins Break".to_string(),
-            "Custom".to_string(),
-        ];
-
         let current_session = PomodoroSession {
             timer_type: TimerType::Work,
             duration: Duration::from_secs(25 * 60), // 25 minutes
@@ -102,9 +92,6 @@ impl PomodoroTimer {
             current_session,
             mode: TimerMode::Manual,
             completed_sessions: 0,
-            selected_index: 0,
-            menu_options,
-            list_state,
             show_controls_popup: false,
             show_custom_input: false,
             custom_input: String::new(),
@@ -268,15 +255,6 @@ impl PomodoroTimer {
         };
     }
 
-    fn move_selection(&mut self, direction: i32) {
-        let len = self.menu_options.len();
-        if direction > 0 {
-            self.selected_index = (self.selected_index + 1) % len;
-        } else if direction < 0 {
-            self.selected_index = if self.selected_index == 0 { len - 1 } else { self.selected_index - 1 };
-        }
-        self.list_state.select(Some(self.selected_index));
-    }
 
     fn get_timer_progress(&self) -> (Duration, Duration) {
         let current_elapsed = if self.current_session.is_running {
@@ -292,6 +270,7 @@ impl PomodoroTimer {
         (current_elapsed, self.current_session.duration)
     }
 
+    #[allow(dead_code)]
     fn format_duration(duration: Duration) -> String {
         let total_seconds = duration.as_secs();
         let minutes = total_seconds / 60;
@@ -306,14 +285,6 @@ impl PomodoroTimer {
         }
     }
 
-    fn execute_selected_action(&mut self) {
-        match self.selected_index {
-            0 => self.start_work_session(),     // 25 mins Work
-            1 => self.start_break_session(),    // 5 mins Break
-            2 => self.show_custom_input_dialog(), // Custom - show input dialog
-            _ => {}
-        }
-    }
 
     fn is_timer_finished(&self) -> bool {
         let (elapsed, total) = self.get_timer_progress();
@@ -333,10 +304,11 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Title
-            Constraint::Min(8),    // Menu list
-            Constraint::Length(3), // Progress bar
-            Constraint::Length(3), // Status
+            Constraint::Length(3),  // Title
+            Constraint::Length(7),  // ASCII countdown (5 lines + padding)
+            Constraint::Length(4),  // Session info and menu options
+            Constraint::Length(3),  // Progress bar
+            Constraint::Length(3),  // Status
         ])
         .split(f.area());
 
@@ -347,35 +319,58 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(PRIMARY_COLOR)));
     f.render_widget(title, chunks[0]);
 
-    // Menu list
-    let items: Vec<ListItem> = timer
-        .menu_options
-        .iter()
-        .enumerate()
-        .map(|(i, option)| {
-            let indicator = if i == timer.selected_index { "→ " } else { "  " };
-            let content = format!("{indicator}{option}");
+    // ASCII Art Countdown Timer
+    let (elapsed, total) = timer.get_timer_progress();
+    let remaining = if total > elapsed {
+        total - elapsed
+    } else {
+        Duration::from_secs(0)
+    };
+    
+    let remaining_minutes = remaining.as_secs() / 60;
+    let remaining_seconds = remaining.as_secs() % 60;
+    let time_display = format!("{:02}:{:02}", remaining_minutes, remaining_seconds);
+    
+    // Get the session type color
+    let timer_color = match timer.current_session.timer_type {
+        TimerType::Work => Color::Red,
+        TimerType::Break => Color::Cyan,
+    };
+    
+    let countdown_lines = create_time_display_lines(&time_display, timer_color);
+    
+    let countdown_paragraph = Paragraph::new(countdown_lines)
+        .alignment(Alignment::Center);
+    
+    f.render_widget(countdown_paragraph, chunks[1]);
 
-            let style = if i == timer.selected_index {
-                Style::default().fg(HIGHLIGHT_COLOR).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(Color::White)
-            };
-
-            ListItem::new(content).style(style)
-        })
-        .collect();
-
-    let menu_list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Menu")
-                .border_style(Style::default().fg(PRIMARY_COLOR)),
-        )
-        .highlight_style(Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD));
-
-    f.render_stateful_widget(menu_list, chunks[1], &mut timer.list_state.clone());
+    // Session Info and Menu Options
+    let session_type = match timer.current_session.timer_type {
+        TimerType::Work => "Work Session",
+        TimerType::Break => "Break Session",
+    };
+    
+    let session_info_lines = vec![
+        Line::from(vec![
+            Span::styled(session_type, Style::default().fg(timer_color).add_modifier(Modifier::BOLD)),
+        ]).alignment(Alignment::Center),
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled("W", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(": Work | "),
+            Span::styled("B", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(": Break | "),
+            Span::styled("C", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(": Custom | "),
+            Span::styled("Space", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+            Span::raw(": Pause/Resume"),
+        ]).alignment(Alignment::Center),
+    ];
+    
+    let session_info = Paragraph::new(session_info_lines)
+        .alignment(Alignment::Center);
+    f.render_widget(session_info, chunks[2]);
 
     // Progress bar
     let (elapsed, total) = timer.get_timer_progress();
@@ -385,37 +380,25 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         0.0
     };
 
-    let remaining = if total > elapsed {
-        total - elapsed
-    } else {
-        Duration::from_secs(0)
-    };
-
-    let session_type = match timer.current_session.timer_type {
-        TimerType::Work => "Work",
-        TimerType::Break => "Break",
-    };
-
-    let progress_label_text = format!(
-        "{} {}/{}",
-        session_type,
-        PomodoroTimer::format_duration(remaining),
-        PomodoroTimer::format_duration(total)
+    let progress_label = Span::styled(
+        format!(
+            "{:.1}%",
+            progress_ratio * 100.0
+        ),
+        Style::default().fg(Color::White)
     );
-
-    let progress_label = Span::styled(progress_label_text, Style::default().fg(Color::White));
 
     let progress_bar = Gauge::default()
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Timer")
+                .title("Progress")
                 .border_style(Style::default().fg(PRIMARY_COLOR)),
         )
-        .gauge_style(Style::default().fg(PRIMARY_COLOR))
+        .gauge_style(Style::default().fg(timer_color))
         .ratio(progress_ratio)
         .label(progress_label);
-    f.render_widget(progress_bar, chunks[2]);
+    f.render_widget(progress_bar, chunks[3]);
 
     // Status
     let mode_text = match timer.mode {
@@ -441,7 +424,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             .title("Status")
             .border_style(Style::default().fg(PRIMARY_COLOR)),
     );
-    f.render_widget(status, chunks[3]);
+    f.render_widget(status, chunks[4]);
 
     // Controls popup
     if timer.show_controls_popup {
@@ -712,11 +695,7 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                         modifiers: KeyModifiers::NONE,
                         ..
                     } => {
-                        if timer.current_session.is_running || timer.current_session.elapsed > Duration::from_secs(0) {
-                            timer.toggle_timer();
-                        } else {
-                            timer.execute_selected_action();
-                        }
+                        timer.toggle_timer();
                     }
 
                     KeyEvent {
@@ -735,21 +714,7 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                         timer.show_controls_popup = !timer.show_controls_popup;
                     }
 
-                    KeyEvent {
-                        code: KeyCode::Up,
-                        modifiers: KeyModifiers::NONE,
-                        ..
-                    } => {
-                        timer.move_selection(-1);
-                    }
-
-                    KeyEvent {
-                        code: KeyCode::Down,
-                        modifiers: KeyModifiers::NONE,
-                        ..
-                    } => {
-                        timer.move_selection(1);
-                    }
+                    // Removed Up/Down navigation since we no longer have a menu
 
                     KeyEvent {
                         code: KeyCode::Char('m'),

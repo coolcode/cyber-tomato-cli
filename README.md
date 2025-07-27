@@ -122,6 +122,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- **ASCII-ART Numbers** from [yuanqing](https://gist.github.com/yuanqing/ffa2244bd134f911d365#file-gistfile1-txt)
 - **Rodio** team for excellent Rust audio library
 - **Ratatui** team for powerful TUI framework
 - **Rust** community for amazing ecosystem
