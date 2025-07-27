@@ -35,7 +35,7 @@ impl AudioManager {
 
             for (freq, dur) in tones {
                 if *freq == 0.0 {
-                    let silence = rodio::source::Zero::new(1, sample_rate)
+                    let silence = rodio::source::Zero::<f32>::new(1, sample_rate)
                         .take_duration(*dur)
                         .buffered();
                     sink.append(silence);
@@ -98,7 +98,7 @@ impl Iterator for SquareWaveWithDecay {
 }
 
 impl Source for SquareWaveWithDecay {
-    fn current_span_len(&self) -> Option<usize> {
+    fn current_frame_len(&self) -> Option<usize> {
         Some(self.total_samples - self.sample_idx)
     }
 

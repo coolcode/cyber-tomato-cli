@@ -17,14 +17,14 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, Paragraph},
 };
-use rodio::{OutputStreamBuilder, Sink};
+use rodio::{OutputStream, Sink};
 
+mod ascii_digits;
 mod audio;
 mod mario_animation;
-mod ascii_digits;
+use ascii_digits::create_time_display_lines;
 use audio::AudioManager;
 use mario_animation::MarioAnimation;
-use ascii_digits::create_time_display_lines;
 
 #[derive(Clone, Debug, PartialEq)]
 enum TimerType {
@@ -34,8 +34,8 @@ enum TimerType {
 
 #[derive(Clone, Debug, PartialEq)]
 enum TimerMode {
-    Manual,
     Auto,
+    Manual,
 }
 
 #[derive(Clone)]
@@ -48,7 +48,7 @@ struct PomodoroSession {
 }
 
 const HIGHLIGHT_COLOR: Color = Color::Rgb(0, 255, 150);
-const PRIMARY_COLOR: Color = Color::LightGreen;
+const PRIMARY_COLOR: Color = Color::Rgb(144, 255, 161); //Color::Rgb(80,250,123);
 
 struct PomodoroTimer {
     current_session: PomodoroSession,
@@ -59,7 +59,6 @@ struct PomodoroTimer {
     custom_input: String,
     show_mario_animation: bool,
     mario_animation: MarioAnimation,
-    _stream_handle: Option<Box<dyn std::any::Any>>,
     audio_manager: AudioManager,
     custom_work_duration: Duration,
     custom_break_duration: Duration,
@@ -68,11 +67,15 @@ struct PomodoroTimer {
 impl PomodoroTimer {
     fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Initialize audio system for notifications
-        let (stream_handle, sink) = match OutputStreamBuilder::open_default_stream() {
-            Ok(stream_handle) => { 
-                let sink = Sink::connect_new(stream_handle.mixer());
-                (Some(Box::new(stream_handle) as Box<dyn std::any::Any>), Some(Arc::new(Mutex::new(sink))))
-            }
+        let (_stream_handle, sink) = match OutputStream::try_default() {
+            Ok((stream, stream_handle)) => match Sink::try_new(&stream_handle) {
+                Ok(sink) => (Some(Box::new(stream) as Box<dyn std::any::Any>), Some(Arc::new(Mutex::new(sink)))),
+                Err(e) => {
+                    eprintln!("Warning: Could not create audio sink: {e}");
+                    eprintln!("The application will continue but notification sounds may not work.");
+                    (None, None)
+                }
+            },
             Err(e) => {
                 eprintln!("Warning: Could not initialize audio output: {e}");
                 eprintln!("The application will continue but notification sounds may not work.");
@@ -90,14 +93,13 @@ impl PomodoroTimer {
 
         Ok(PomodoroTimer {
             current_session,
-            mode: TimerMode::Manual,
+            mode: TimerMode::Auto,
             completed_sessions: 0,
             show_controls_popup: false,
             show_custom_input: false,
             custom_input: String::new(),
             show_mario_animation: false,
             mario_animation: MarioAnimation::new(),
-            _stream_handle: stream_handle,
             audio_manager: AudioManager { sink },
             custom_work_duration: Duration::from_secs(25 * 60),
             custom_break_duration: Duration::from_secs(5 * 60),
@@ -145,7 +147,7 @@ impl PomodoroTimer {
 
     fn parse_and_start_custom_timer(&mut self) {
         let input = self.custom_input.trim();
-        
+
         if input.is_empty() {
             self.hide_custom_input_dialog();
             return;
@@ -171,26 +173,23 @@ impl PomodoroTimer {
             if parts.len() != 2 {
                 return Err("Invalid format. Use 'work,break' or just 'work'".to_string());
             }
-            
-            let work_mins = parts[0].trim().parse::<u32>()
-                .map_err(|_| "Invalid work minutes")?;
-            let break_mins = parts[1].trim().parse::<u32>()
-                .map_err(|_| "Invalid break minutes")?;
-            
+
+            let work_mins = parts[0].trim().parse::<u32>().map_err(|_| "Invalid work minutes")?;
+            let break_mins = parts[1].trim().parse::<u32>().map_err(|_| "Invalid break minutes")?;
+
             if work_mins == 0 || break_mins == 0 {
                 return Err("Minutes must be greater than 0".to_string());
             }
-            
+
             Ok((work_mins, Some(break_mins)))
         } else {
             // Format: "work" (e.g., "20") - use default 5min break
-            let work_mins = input.parse::<u32>()
-                .map_err(|_| "Invalid work minutes")?;
-            
+            let work_mins = input.parse::<u32>().map_err(|_| "Invalid work minutes")?;
+
             if work_mins == 0 {
                 return Err("Minutes must be greater than 0".to_string());
             }
-            
+
             Ok((work_mins, None)) // Will use default 5min break
         }
     }
@@ -223,14 +222,14 @@ impl PomodoroTimer {
     fn complete_session(&mut self) {
         self.completed_sessions += 1;
         self.play_notification();
-        
+
         // Show Mario animation for work session completion
         if matches!(self.current_session.timer_type, TimerType::Work) {
             self.show_mario_animation = true;
             self.mario_animation = MarioAnimation::new();
             self.mario_animation.start();
         }
-        
+
         match (&self.current_session.timer_type, &self.mode) {
             (TimerType::Work, TimerMode::Auto) => {
                 // Auto mode: switch to break after work
@@ -255,7 +254,6 @@ impl PomodoroTimer {
         };
     }
 
-
     fn get_timer_progress(&self) -> (Duration, Duration) {
         let current_elapsed = if self.current_session.is_running {
             if let Some(start_time) = self.current_session.start_time {
@@ -266,7 +264,7 @@ impl PomodoroTimer {
         } else {
             self.current_session.elapsed
         };
-        
+
         (current_elapsed, self.current_session.duration)
     }
 
@@ -285,13 +283,11 @@ impl PomodoroTimer {
         }
     }
 
-
     fn is_timer_finished(&self) -> bool {
         let (elapsed, total) = self.get_timer_progress();
         elapsed >= total
     }
 }
-
 
 fn ui(f: &mut Frame, timer: &PomodoroTimer) {
     // If Mario animation is active, show it fullscreen
@@ -304,11 +300,10 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Title
-            Constraint::Length(7),  // ASCII countdown (5 lines + padding)
-            Constraint::Length(4),  // Session info and menu options
-            Constraint::Length(3),  // Progress bar
-            Constraint::Length(3),  // Status
+            Constraint::Length(3), // Title
+            Constraint::Length(7), // ASCII countdown (5 lines + padding)
+            Constraint::Length(3), // Progress bar
+            Constraint::Length(3), // Status
         ])
         .split(f.area());
 
@@ -321,56 +316,28 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
 
     // ASCII Art Countdown Timer
     let (elapsed, total) = timer.get_timer_progress();
-    let remaining = if total > elapsed {
-        total - elapsed
-    } else {
-        Duration::from_secs(0)
-    };
-    
+    let remaining = if total > elapsed { total - elapsed } else { Duration::from_secs(0) };
+
     let remaining_minutes = remaining.as_secs() / 60;
     let remaining_seconds = remaining.as_secs() % 60;
     let time_display = format!("{:02}:{:02}", remaining_minutes, remaining_seconds);
-    
+
     // Get the session type color
     let timer_color = match timer.current_session.timer_type {
-        TimerType::Work => Color::Red,
-        TimerType::Break => Color::Cyan,
+        TimerType::Work => PRIMARY_COLOR,
+        TimerType::Break => Color::default(),
     };
-    
-    let countdown_lines = create_time_display_lines(&time_display, timer_color);
-    
-    let countdown_paragraph = Paragraph::new(countdown_lines)
-        .alignment(Alignment::Center);
-    
-    f.render_widget(countdown_paragraph, chunks[1]);
 
-    // Session Info and Menu Options
-    let session_type = match timer.current_session.timer_type {
-        TimerType::Work => "Work Session",
-        TimerType::Break => "Break Session",
-    };
-    
-    let session_info_lines = vec![
-        Line::from(vec![
-            Span::styled(session_type, Style::default().fg(timer_color).add_modifier(Modifier::BOLD)),
-        ]).alignment(Alignment::Center),
-        Line::from(""),
-        Line::from(vec![
-            Span::raw("  "),
-            Span::styled("W", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Work | "),
-            Span::styled("B", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Break | "),
-            Span::styled("C", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Custom | "),
-            Span::styled("Space", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
-            Span::raw(": Pause/Resume"),
-        ]).alignment(Alignment::Center),
-    ];
-    
-    let session_info = Paragraph::new(session_info_lines)
-        .alignment(Alignment::Center);
-    f.render_widget(session_info, chunks[2]);
+    let countdown_lines = create_time_display_lines(&time_display, timer_color);
+
+    let countdown_paragraph = Paragraph::new(countdown_lines).alignment(Alignment::Center).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("")
+            .border_style(Style::default().fg(PRIMARY_COLOR)),
+    );
+
+    f.render_widget(countdown_paragraph, chunks[1]);
 
     // Progress bar
     let (elapsed, total) = timer.get_timer_progress();
@@ -380,13 +347,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         0.0
     };
 
-    let progress_label = Span::styled(
-        format!(
-            "{:.1}%",
-            progress_ratio * 100.0
-        ),
-        Style::default().fg(Color::White)
-    );
+    let progress_label = Span::styled(format!("{:.1}%", progress_ratio * 100.0), Style::default().fg(Color::White));
 
     let progress_bar = Gauge::default()
         .block(
@@ -398,7 +359,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         .gauge_style(Style::default().fg(timer_color))
         .ratio(progress_ratio)
         .label(progress_label);
-    f.render_widget(progress_bar, chunks[3]);
+    f.render_widget(progress_bar, chunks[2]);
 
     // Status
     let mode_text = match timer.mode {
@@ -406,14 +367,16 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         TimerMode::Auto => "Auto",
     };
 
-    let status_text = if timer.current_session.is_running {
-        "Running"
-    } else {
-        "Paused"
+    let status_text = match timer.current_session.timer_type {
+        TimerType::Work => "Working",
+        TimerType::Break => "On Break",
     };
 
     let status = Paragraph::new(vec![Line::from(vec![
-        Span::raw(format!("  Mode: {} | Status: {} | Done: {} | ", mode_text, status_text, timer.completed_sessions)),
+        Span::raw(format!(
+            "  Mode: {} | Status: {} | Done: {} | ",
+            mode_text, status_text, timer.completed_sessions
+        )),
         Span::styled("X", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
         Span::raw(": Help  "),
     ])])
@@ -424,7 +387,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             .title("Status")
             .border_style(Style::default().fg(PRIMARY_COLOR)),
     );
-    f.render_widget(status, chunks[4]);
+    f.render_widget(status, chunks[3]);
 
     // Controls popup
     if timer.show_controls_popup {
@@ -485,7 +448,11 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
 
         let input_popup = Paragraph::new(vec![
             Line::from(""),
-            Line::from(vec![Span::styled("CUSTOM TIMER", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD))]).alignment(Alignment::Center),
+            Line::from(vec![Span::styled(
+                "CUSTOM TIMER",
+                Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD),
+            )])
+            .alignment(Alignment::Center),
             Line::from(""),
             Line::from(vec![
                 Span::raw("Format: "),
@@ -615,7 +582,7 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                     }
                     continue;
                 }
-                
+
                 // Handle custom input dialog
                 if timer.show_custom_input {
                     match key {
@@ -715,7 +682,6 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                     }
 
                     // Removed Up/Down navigation since we no longer have a menu
-
                     KeyEvent {
                         code: KeyCode::Char('m'),
                         modifiers: KeyModifiers::NONE,
@@ -739,7 +705,7 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                 timer.show_mario_animation = false;
             }
         }
-        
+
         // Check if timer finished
         if timer.current_session.is_running && timer.is_timer_finished() {
             timer.complete_session();
@@ -771,7 +737,7 @@ mod tests {
     #[test]
     fn test_timer_creation() {
         let timer = PomodoroTimer::new().unwrap();
-        assert_eq!(timer.mode, TimerMode::Manual);
+        assert_eq!(timer.mode, TimerMode::Auto);
         assert_eq!(timer.completed_sessions, 0);
         assert_eq!(timer.current_session.timer_type, TimerType::Work);
         assert!(!timer.current_session.is_running);
