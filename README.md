@@ -45,7 +45,7 @@ cargo build --release
 |-----|--------|
 | `W` | Start 25 mins Work |
 | `B` | 5 mins Break |
-| `C` | Custom mins, popup an input box for mins, "30,10"=30mins work+10mins break; "20"=20mins work, then 5mins break as default value. |
+| `C` | Custom mins, popup an input box for mins, eg. "30,10"=30mins work+10mins break; "20"=20mins work, then 5mins break as default value. |
 | `Space/↵` | Pause Resume timer |
 | `T` | Toggle Manual/Auto mode, auto means loop work+break for 20 times |
 | `X` | Help |
