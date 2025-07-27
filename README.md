@@ -1,23 +1,42 @@
 # CYBER TOMATO
 
-A minimalist terminal-based pomodoro application built with Rust.
+A minimalist terminal-based pomodoro application built with Rust, featuring ASCII art timer display, Mario-style animations, and immersive audio feedback.
 
 ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 ![Terminal](https://img.shields.io/badge/Terminal-UI-green?style=for-the-badge)
-
+![Audio](https://img.shields.io/badge/Audio-Enabled-blue?style=for-the-badge)
 
 ## Features
 
-- **Beautiful TUI**: Clean terminal interface with cyberpunk green theme
-- **Visual Progress**: Real-time progress bar with time display
-- **Smart Controls**: Intuitive keyboard controls with popup help (Press **X**)
-- **Keyboard-Driven**: Lightning-fast keyboard-only interface
+### Core Timer Functions
+- **Work Sessions**: Default 25-minute focused work periods
+- **Break Sessions**: 5-minute rest periods with relaxing completion music
+- **Custom Timers**: Flexible timing with format like "30,10" (30min work + 10min break) or "20" (20min work + 5min default break)
+- **Auto/Manual Modes**: Auto mode cycles between work and break sessions automatically
+
+### Visual Experience
+- **Large ASCII Art Timer**: Eye-catching countdown display with custom digit patterns
+- **Cyberpunk Green Theme**: Consistent neon green aesthetic throughout the interface
+- **Real-time Progress Bar**: Visual progress tracking with percentage display
+- **Clean TUI Layout**: 4-panel interface optimized for terminal use
+
+### Audio & Animation
+- **Mario Animation**: Delightful Super Mario-style brick-breaking animation for work completion
+- **Synchronized Music**: Mario Bros theme music with sound effects during animations
+- **Break Completion Music**: 6-second melodic sequence to signal end of break time
+- **Work Completion Sounds**: Quick notification tones for work session completion
+
+### Keyboard-Driven Interface
+- **Lightning-fast Controls**: All functions accessible via single keypresses
+- **Interactive Help**: Press **X** for comprehensive controls popup
+- **Custom Timer Input**: Intuitive dialog with format validation and examples
 
 ## Quick Start
 
 ### Prerequisites
 
 - **Rust 1.70+** - [Install Rust](https://rustup.rs/)
+- **Audio System** - Ensure your system has working audio output
 
 ### Installation
 
@@ -34,62 +53,97 @@ cargo build --release
 ./target/release/cyber-tomato
 ```
 
-
 ## Controls
 
 > **Tip**: Press **X** anytime to view the interactive controls popup!
 
 ### Essential Keys
 
-| Key | Action |
-|-----|--------|
-| `W` | Start 25 mins Work |
-| `B` | 5 mins Break |
-| `C` | Custom mins, popup an input box for mins, eg. "30,10"=30mins work+10mins break; "20"=20mins work, then 5mins break as default value. |
-| `Space/↵` | Pause Resume timer |
-| `T` | Toggle Manual/Auto mode, auto means loop work+break for 20 times |
-| `X` | Help |
-| `Esc` | Exit application |
+| Key | Action | Description |
+|-----|--------|-------------|
+| `W` | Start Work Session | Begin 25-minute work period |
+| `B` | Start Break Session | Begin 5-minute break period |
+| `C` | Custom Timer | Open custom timer input dialog |
+| `Space`/`Enter` | Pause/Resume | Toggle timer pause state |
+| `T` | Toggle Mode | Switch between Manual/Auto modes |
+| `M` | Mario Animation | Trigger Mario animation (for testing) |
+| `X` | Help | Show/hide controls popup |
+| `Esc` | Exit | Quit application |
 
-## Interface
+### Custom Timer Format
 
-CYBER TOMATO features a clean, 4-panel interface that maximizes space for your music:
+- **"30,10"** → 30 minutes work + 10 minutes break
+- **"20"** → 20 minutes work + 5 minutes default break
+- **Numbers only** → Work time with 5-minute default break
+
+## Interface Layout
+
+CYBER TOMATO features a clean, bordered interface:
 
 ```
 ┌─────────────────────────────────┐
 │         CYBER TOMATO            │  ← Title Bar
 ├─────────────────────────────────┤
-│ → 25 mins Work                  │  ← Menu List
-│   5 mins Break                  │    
-│   Custom                        │
+│                                 │
+│     ██████   ██████   ██████    │  ← ASCII Art Timer
+│     ██  ██   ██  ██   ██  ██    │    (Large Digital Display)
+│     ██████   ██████   ██████    │
 │                                 │
 ├─────────────────────────────────┤
-│ ████████████████░░░░ 02:30/04:15│  ← Progress Bar
+│ Progress ████████████████░░░ 85% │  ← Progress Bar
 ├─────────────────────────────────┤
-│ Mode: ___ | Done: 5 | X: Help   │  ← Status & Help
+│ Mode: Auto | Status: Working    │  ← Status & Help
+│ Done: 5 | X: Help               │
 └─────────────────────────────────┘
 ```
+
+## Special Features
+
+### Mario Animation
+- Triggered automatically when work sessions complete
+- Features Mario jumping, hitting bricks, and collecting mushrooms
+- Synchronized with classic Mario Bros theme music
+- Interactive brick-breaking physics simulation
+
+### Audio System
+- **Work Completion**: Quick notification beeps
+- **Break Completion**: Musical melody (notification tones + 6-second relaxing tune)
+- **Mario Animation**: Full theme song with jump, brick-break, and power-up sound effects
+- **High-Quality Audio**: Square wave synthesis with decay envelopes
+
+### Auto Mode
+- Automatically cycles between work and break sessions
+- Perfect for uninterrupted pomodoro technique practice
+- Visual and audio feedback for session transitions
+
 ## Technical Details
 
-
 ### Core Dependencies
-- **`rodio`** - Play a sound effect once work/break completed 
-- **`ratatui`** - Modern terminal user interface framework
-- **`crossterm`** - Cross-platform terminal control
-
-## Development
+- **`rodio 0.20`** - High-quality audio playback and synthesis
+- **`ratatui 0.29`** - Modern terminal user interface framework
+- **`crossterm 0.29`** - Cross-platform terminal control
 
 ### Project Structure
 
 ```
-cyber-tomato/
+cyber-tomato-cli/
 ├── src/
-│   └── main.rs          # Complete application 
-├── .github/workflows/   # CI/CD automation
-├── Cargo.toml          # Dependencies and metadata
-├── rustfmt.toml        # Code formatting rules
-└── README.md           # Documentation
+│   ├── main.rs              # Core application logic
+│   ├── audio.rs             # Audio management and synthesis
+│   ├── mario_animation.rs   # Mario animation system
+│   └── ascii_digits.rs      # ASCII art digit rendering
+├── Cargo.toml              # Dependencies and metadata
+├── rustfmt.toml            # Code formatting rules
+└── README.md               # This documentation
 ```
+
+### Audio Implementation
+- **Fresh Stream Architecture**: Creates new audio streams for each playback
+- **Custom Synthesis**: Square wave generation with exponential decay
+- **Synchronized Playback**: Coordinated music and sound effects
+- **Cross-Platform**: Works on Linux, macOS, and Windows
+
+## Development
 
 ### Building & Testing
 
@@ -108,6 +162,12 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo fmt --all -- --check
 ```
 
+### Audio Testing
+The application gracefully handles systems without audio:
+- Displays warning messages for audio initialization failures
+- Continues normal timer operation without sound
+- All visual features remain fully functional
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -115,18 +175,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests if applicable
-5. Submit a pull request
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Submit a pull request
 
 ## Acknowledgments
 
-- **ASCII-ART Numbers** from [yuanqing](https://gist.github.com/yuanqing/ffa2244bd134f911d365#file-gistfile1-txt)
-- **Rodio** team for excellent Rust audio library
-- **Ratatui** team for powerful TUI framework
-- **Rust** community for amazing ecosystem
+- **ASCII Art Numbers** from [yuanqing](https://gist.github.com/yuanqing/ffa2244bd134f911d365#file-gistfile1-txt)
+- **Rodio Team** for excellent Rust audio library
+- **Ratatui Team** for powerful TUI framework
+- **Rust Community** for amazing ecosystem and tools
+- **Super Mario Bros** for inspiration on the animation system
 
 ---
 
-**Built with Claud Code**
+**Built with Claude Code**
+
+*Perfect your productivity with the timeless pomodoro technique, enhanced by retro gaming charm and modern Rust performance.*
