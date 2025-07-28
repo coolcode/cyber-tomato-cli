@@ -359,7 +359,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
                 .title("Progress")
                 .border_style(Style::default().fg(PRIMARY_COLOR)),
         )
-        .gauge_style(Style::default().fg(PRIMARY_COLOR).bg(Color::default())) //.fg(timer_color).bg(Color::default())
+        .gauge_style(Style::default().fg(timer_color).bg(Color::default())) 
         
         .ratio(progress_ratio)
         .label(progress_label);
