@@ -90,7 +90,7 @@ pub fn get_digit_lines(digit: char) -> Vec<&'static str> {
     }
 }
 
-pub fn create_time_display_lines(time_str: &str, color: Color) -> Vec<Line> {
+pub fn create_time_display_lines(time_str: &str, color: Color) -> Vec<Line<'_>> {
     let chars: Vec<char> = time_str.chars().collect();
     let mut lines = vec![String::new(); 5]; // 5 lines for each digit
     

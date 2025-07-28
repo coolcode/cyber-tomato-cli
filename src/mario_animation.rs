@@ -273,7 +273,7 @@ impl MarioAnimation {
         self.mushroom_particles.retain(|p| p.life > 0.0);
     }
 
-    pub fn render(&self, _area: Rect) -> Canvas<impl Fn(&mut Context)> {
+    pub fn render(&self, _area: Rect) -> Canvas<'_, impl Fn(&mut Context)> {
         Canvas::default()
             .marker(Marker::Braille)
             .x_bounds([0.0, 240.0])
