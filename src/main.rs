@@ -49,7 +49,7 @@ const HIGHLIGHT_COLOR: Color = Color::Rgb(0, 255, 150);
 const PRIMARY_COLOR: Color = Color::Rgb(144, 255, 161); //Color::Rgb(80,250,123);
 
 fn set_terminal_title(title: &str) {
-    print!("\x1b]0;{}\x07", title);
+    print!("\x1b]0;{title}\x07");
     io::stdout().flush().unwrap_or(());
 }
 
@@ -290,7 +290,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         TimerType::Break => "Break",
     };
 
-    let title = format!("CYBER TOMATO - {} {:02}:{:02}", session_type, remaining_minutes, remaining_seconds);
+    let title = format!("CYBER TOMATO - {session_type} {remaining_minutes:02}:{remaining_seconds:02}");
     set_terminal_title(&title);
 
     // If Mario animation is active, show it fullscreen
@@ -323,7 +323,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
 
     let remaining_minutes = remaining.as_secs() / 60;
     let remaining_seconds = remaining.as_secs() % 60;
-    let time_display = format!("{:02}:{:02}", remaining_minutes, remaining_seconds);
+    let time_display = format!("{remaining_minutes:02}:{remaining_seconds:02}");
 
     // Get the session type color
     let timer_color = match timer.current_session.timer_type {
@@ -573,15 +573,12 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
             if let Ok(Event::Key(key)) = event::read() {
                 // Handle Mario animation first
                 if timer.show_mario_animation {
-                    match key {
-                        KeyEvent {
-                            code: KeyCode::Esc | KeyCode::Enter | KeyCode::Char(' '),
-                            modifiers: KeyModifiers::NONE,
-                            ..
-                        } => {
-                            timer.show_mario_animation = false;
-                        }
-                        _ => {}
+                    if let KeyEvent {
+                        code: KeyCode::Esc | KeyCode::Enter | KeyCode::Char(' '),
+                        modifiers: KeyModifiers::NONE,
+                        ..
+                    } = key {
+                        timer.show_mario_animation = false;
                     }
                     continue;
                 }

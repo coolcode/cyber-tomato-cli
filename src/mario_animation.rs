@@ -4,7 +4,7 @@ use ratatui::{
     symbols::Marker,
     widgets::canvas::{Canvas, Circle, Context, Line, Rectangle},
 };
-use rodio::{OutputStream, Sink, Source};
+use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
 use std::f32::consts::PI;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -74,12 +74,17 @@ impl MarioAnimation {
         }
 
         // Initialize audio system for music and sound effects
-        let (stream, music_sink, sfx_sink) = match OutputStream::try_default() {
-            Ok((stream, stream_handle)) => match (Sink::try_new(&stream_handle), Sink::try_new(&stream_handle)) {
-                (Ok(music_sink), Ok(sfx_sink)) => (Some(stream), Some(Arc::new(Mutex::new(music_sink))), Some(Arc::new(Mutex::new(sfx_sink)))),
-                _ => (None, None, None),
-            },
-            Err(_) => (None, None, None),
+        let (stream, music_sink, sfx_sink) = if let Ok(builder) = OutputStreamBuilder::from_default_device() {
+            if let Ok(mut stream) = builder.open_stream_or_fallback() {
+            stream.log_on_drop(false);
+            let music_sink = Sink::connect_new(stream.mixer());
+            let sfx_sink = Sink::connect_new(stream.mixer());
+                (Some(stream), Some(Arc::new(Mutex::new(music_sink))), Some(Arc::new(Mutex::new(sfx_sink))))
+            } else {
+                (None, None, None)
+            }
+        } else {
+            (None, None, None)
         };
 
         Self {
@@ -554,7 +559,7 @@ impl MarioAnimation {
                     sink.append(source);
                 } else {
                     // Rest/silence
-                    let silence = rodio::source::Zero::<f32>::new(1, 44100)
+                    let silence = rodio::source::Zero::new(1, 44100)
                         .take_duration(Duration::from_millis(duration_ms))
                         .buffered();
                     sink.append(silence);
@@ -606,7 +611,7 @@ impl MarioAnimation {
     fn play_sound_effect(&self, sink: &std::sync::MutexGuard<Sink>, tones: &[(f32, Duration)]) {
         for (freq, dur) in tones {
             if *freq == 0.0 {
-                let silence = rodio::source::Zero::<f32>::new(1, 44100).take_duration(*dur).buffered();
+                let silence = rodio::source::Zero::new(1, 44100).take_duration(*dur).buffered();
                 sink.append(silence);
             } else {
                 let source = MarioTone::new(*freq, *dur);
@@ -663,7 +668,7 @@ impl Iterator for MarioTone {
 }
 
 impl Source for MarioTone {
-    fn current_frame_len(&self) -> Option<usize> {
+    fn current_span_len(&self) -> Option<usize> {
         Some(self.total_samples - self.sample_idx)
     }
 

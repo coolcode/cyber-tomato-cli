@@ -1,4 +1,4 @@
-use rodio::Source;
+use rodio::{OutputStreamBuilder, Source};
 use std::f32::consts::PI;
 use std::time::Duration;
 
@@ -59,23 +59,27 @@ impl AudioManager {
 
     fn play_audio(&self, tones: &[(f32, Duration)]) {
         // Create a new stream and sink for each audio playback
-        if let Ok((_stream, stream_handle)) = rodio::OutputStream::try_default() {
-            if let Ok(sink) = rodio::Sink::try_new(&stream_handle) {
-                let sample_rate = 44100;
+        if let Ok(builder) = OutputStreamBuilder::from_default_device() {
+        if let Ok(mut stream) = builder.open_stream_or_fallback() {
+            // Disable logging on drop to prevent stderr output
+            stream.log_on_drop(false);
+            
+            let sink = rodio::Sink::connect_new(stream.mixer());
+            let sample_rate = 44100;
 
-                for (freq, dur) in tones {
-                    if *freq == 0.0 {
-                        let silence = rodio::source::Zero::<f32>::new(1, sample_rate).take_duration(*dur).buffered();
-                        sink.append(silence);
-                    } else {
-                        let source = SquareWaveWithDecay::new(*freq, *dur, sample_rate);
-                        sink.append(source);
-                    }
+            for (freq, dur) in tones {
+                if *freq == 0.0 {
+                    let silence = rodio::source::Zero::new(1, sample_rate).take_duration(*dur).buffered();
+                    sink.append(silence);
+                } else {
+                    let source = SquareWaveWithDecay::new(*freq, *dur, sample_rate);
+                    sink.append(source);
                 }
-
-                // Wait for the audio to finish playing
-                sink.sleep_until_end();
             }
+
+            // Wait for the audio to finish playing
+            sink.sleep_until_end();
+        }
         }
     }
 }
@@ -123,14 +127,14 @@ impl Iterator for SquareWaveWithDecay {
             1.0
         };
 
-        let sample = wave as f32 * env * fade;
+        let sample = wave * env * fade;
         self.sample_idx += 1;
         Some(sample)
     }
 }
 
 impl Source for SquareWaveWithDecay {
-    fn current_frame_len(&self) -> Option<usize> {
+    fn current_span_len(&self) -> Option<usize> {
         Some(self.total_samples - self.sample_idx)
     }
 
