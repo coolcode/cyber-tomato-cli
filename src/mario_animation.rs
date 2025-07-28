@@ -10,17 +10,17 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub struct MarioAnimation {
-    mario_x: f64,
-    mario_y: f64,
-    mario_vx: f64,
-    mario_vy: f64,
+    cat_x: f64,
+    cat_y: f64,
+    cat_vx: f64,
+    cat_vy: f64,
 
-    mushroom_x: f64,
-    mushroom_y: f64,
-    mushroom_vy: f64, // For mushroom falling
-    mushroom_hit: bool,
-    mushroom_exploding: bool,
-    mushroom_particles: Vec<Particle>,
+    tomato_x: f64,
+    tomato_y: f64,
+    tomato_vy: f64, // For tomato falling
+    tomato_hit: bool,
+    tomato_exploding: bool,
+    tomato_particles: Vec<Particle>,
 
     bricks: Vec<Brick>,
     bricks_hit: bool,
@@ -58,15 +58,15 @@ struct Brick {
 impl MarioAnimation {
     pub fn new() -> Self {
         let ground_y = 10.0;
-        let mushroom_x = 120.0;
-        let mushroom_y = 75.0; // High up in the brick block
+        let tomato_x = 120.0;
+        let tomato_y = 75.0; // High up in the brick block
 
-        // Create bricks around mushroom - these contain the mushroom
+        // Create bricks around tomato - these contain the tomato
         let mut bricks = Vec::new();
         for i in -2..=2 {
             bricks.push(Brick {
-                x: mushroom_x + (i as f64 * 8.0),
-                y: mushroom_y - 2.0, // Bricks are slightly below mushroom
+                x: tomato_x + (i as f64 * 8.0),
+                y: tomato_y - 2.0, // Bricks are slightly below tomato
                 visible: true,
                 breaking: false,
                 break_particles: Vec::new(),
@@ -88,17 +88,17 @@ impl MarioAnimation {
         };
 
         Self {
-            mario_x: 20.0,
-            mario_y: ground_y,
-            mario_vx: 2.0,
-            mario_vy: 0.0,
+            cat_x: 20.0,
+            cat_y: ground_y,
+            cat_vx: 2.0,
+            cat_vy: 0.0,
 
-            mushroom_x,
-            mushroom_y,
-            mushroom_vy: 0.0,
-            mushroom_hit: false,
-            mushroom_exploding: false,
-            mushroom_particles: Vec::new(),
+            tomato_x,
+            tomato_y,
+            tomato_vy: 0.0,
+            tomato_hit: false,
+            tomato_exploding: false,
+            tomato_particles: Vec::new(),
 
             bricks,
             bricks_hit: false,
@@ -135,35 +135,35 @@ impl MarioAnimation {
 
         self.animation_frame += 1;
 
-        // Mario physics
-        self.mario_x += self.mario_vx;
-        self.mario_y += self.mario_vy;
+        // Cat physics
+        self.cat_x += self.cat_vx;
+        self.cat_y += self.cat_vy;
 
-        // Gravity for Mario
-        if self.mario_y > self.ground_y {
-            self.mario_vy -= 1.5; // Gravity
+        // Gravity for Cat
+        if self.cat_y > self.ground_y {
+            self.cat_vy -= 1.5; // Gravity
         } else {
-            self.mario_y = self.ground_y;
-            if self.mario_vy < 0.0 {
-                self.mario_vy = 0.0;
+            self.cat_y = self.ground_y;
+            if self.cat_vy < 0.0 {
+                self.cat_vy = 0.0;
             }
         }
 
-        // Jump when approaching the brick area (Mario needs to reach the bricks)
-        if !self.bricks_hit && self.mario_x > self.mushroom_x - 30.0 && self.mario_x < self.mushroom_x - 5.0 && self.mario_y <= self.ground_y + 1.0 {
-            self.mario_vy = 15.0; // High jump to reach the bricks above
+        // Jump when approaching the brick area (Cat needs to reach the bricks)
+        if !self.bricks_hit && self.cat_x > self.tomato_x - 30.0 && self.cat_x < self.tomato_x - 5.0 && self.cat_y <= self.ground_y + 1.0 {
+            self.cat_vy = 15.0; // High jump to reach the bricks above
             self.play_jump_sound();
         }
 
-        // Check collision with bricks (Mario hits bricks from below)
-        if !self.bricks_hit && self.mario_vy > 0.0 {
-            // Mario is jumping up
+        // Check collision with bricks (Cat hits bricks from below) - adjusted for cat size
+        if !self.bricks_hit && self.cat_vy > 0.0 {
+            // Cat is jumping up
             for brick in &self.bricks {
                 if brick.visible && 
-                   self.mario_x > brick.x - 4.0 && 
-                   self.mario_x < brick.x + 4.0 &&
-                   self.mario_y >= brick.y - 8.0 && // Mario reaches the brick level
-                   self.mario_y <= brick.y - 3.0
+                   self.cat_x > brick.x - 5.0 && // Collision box for cat
+                   self.cat_x < brick.x + 5.0 &&
+                   self.cat_y >= brick.y - 10.0 && // Higher collision box for cat
+                   self.cat_y <= brick.y - 3.0
                 {
                     self.hit_bricks();
                     break;
@@ -171,16 +171,16 @@ impl MarioAnimation {
             }
         }
 
-        // Mushroom physics after bricks are hit
-        if self.bricks_hit && !self.mushroom_hit {
-            if self.mushroom_y > self.ground_y + 5.0 {
-                self.mushroom_vy += 0.5; // Gravity acceleration
-                self.mushroom_y -= self.mushroom_vy; // Fall down
+        // Tomato physics after bricks are hit
+        if self.bricks_hit && !self.tomato_hit {
+            if self.tomato_y > self.ground_y + 5.0 {
+                self.tomato_vy += 0.5; // Gravity acceleration
+                self.tomato_y -= self.tomato_vy; // Fall down
             } else {
-                // Mushroom reaches ground
-                self.mushroom_y = self.ground_y + 5.0;
-                if !self.mushroom_exploding {
-                    self.explode_mushroom();
+                // Tomato reaches ground
+                self.tomato_y = self.ground_y + 5.0;
+                if !self.tomato_exploding {
+                    self.explode_tomato();
                 }
             }
         }
@@ -199,9 +199,9 @@ impl MarioAnimation {
             brick.break_particles.retain(|p| p.life > 0.0);
         }
 
-        // Continue moving Mario after hitting bricks
-        if self.bricks_hit && self.mario_x < 200.0 {
-            self.mario_vx = 1.5;
+        // Continue moving Cat after hitting bricks
+        if self.bricks_hit && self.cat_x < 200.0 {
+            self.cat_vx = 1.5;
         }
     }
 
@@ -231,46 +231,46 @@ impl MarioAnimation {
             }
         }
 
-        // Mario gets a little bounce back from hitting the bricks
-        self.mario_vy = -2.0;
+        // Cat gets a little bounce back from hitting the bricks
+        self.cat_vy = -2.0;
     }
 
-    fn explode_mushroom(&mut self) {
-        self.mushroom_hit = true;
-        self.mushroom_exploding = true;
+    fn explode_tomato(&mut self) {
+        self.tomato_hit = true;
+        self.tomato_exploding = true;
 
         // Play power-up sound
         self.play_powerup_sound();
 
-        // Create mushroom explosion particles
+        // Create tomato explosion particles
         for i in 0..25 {
             let angle = (i as f64) * 0.251; // 2π/25
             let speed = 2.0 + (i as f64 % 4.0);
-            self.mushroom_particles.push(Particle {
-                x: self.mushroom_x,
-                y: self.mushroom_y,
+            self.tomato_particles.push(Particle {
+                x: self.tomato_x,
+                y: self.tomato_y,
                 vx: angle.cos() * speed,
                 vy: angle.sin() * speed + 2.0,
                 life: 1.0,
                 color: if i % 3 == 0 {
                     Color::Red
                 } else if i % 3 == 1 {
-                    Color::Yellow
+                    Color::Green
                 } else {
-                    Color::White
+                    Color::Yellow
                 },
             });
         }
     }
 
     fn update_particles(&mut self) {
-        for particle in &mut self.mushroom_particles {
+        for particle in &mut self.tomato_particles {
             particle.x += particle.vx;
             particle.y += particle.vy;
             particle.vy -= 0.2; // Gravity
             particle.life -= 0.015;
         }
-        self.mushroom_particles.retain(|p| p.life > 0.0);
+        self.tomato_particles.retain(|p| p.life > 0.0);
     }
 
     pub fn render(&self, _area: Rect) -> Canvas<'_, impl Fn(&mut Context)> {
@@ -308,13 +308,13 @@ impl MarioAnimation {
                     }
                 }
 
-                // Draw mushroom (visible until it explodes)
-                if !self.mushroom_exploding {
-                    self.draw_mushroom(ctx, self.mushroom_x, self.mushroom_y);
+                // Draw tomato (visible until it explodes)
+                if !self.tomato_exploding {
+                    self.draw_tomato(ctx, self.tomato_x, self.tomato_y);
                 }
 
-                // Draw mushroom particles
-                for particle in &self.mushroom_particles {
+                // Draw tomato particles
+                for particle in &self.tomato_particles {
                     ctx.draw(&Circle {
                         x: particle.x,
                         y: particle.y,
@@ -323,23 +323,23 @@ impl MarioAnimation {
                     });
                 }
 
-                // Draw Mario
-                self.draw_mario(ctx, self.mario_x, self.mario_y);
+                // Draw Cat
+                self.draw_mario(ctx, self.cat_x, self.cat_y);
 
                 // Draw visual effects
-                // if self.bricks_hit && !self.mushroom_exploding {
+                // if self.bricks_hit && !self.tomato_exploding {
                 //     // Show "BREAK!" text when bricks are hit
-                //     ctx.print(self.mushroom_x - 15.0, self.mushroom_y + 10.0, "BREAK!");
+                //     ctx.print(self.tomato_x - 15.0, self.tomato_y + 10.0, "BREAK!");
                 // }
 
-                // if self.mushroom_exploding {
+                // if self.tomato_exploding {
                 //     // Show score and power-up text
-                //     ctx.print(self.mushroom_x - 10.0, self.mushroom_y + 15.0, "100");
-                //     ctx.print(self.mario_x - 15.0, self.mario_y + 10.0, "SUPER!");
+                //     ctx.print(self.tomato_x - 10.0, self.tomato_y + 15.0, "100");
+                //     ctx.print(self.cat_x - 15.0, self.cat_y + 10.0, "SUPER!");
                 // }
 
-                // Flash effect when Mario hits bricks
-                if self.bricks_hit && !self.mushroom_hit && self.animation_frame % 8 < 4 {
+                // Flash effect when Cat hits bricks
+                if self.bricks_hit && !self.tomato_hit && self.animation_frame % 8 < 4 {
                     for brick in &self.bricks {
                         if !brick.visible {
                             ctx.draw(&Circle {
@@ -358,95 +358,305 @@ impl MarioAnimation {
     }
 
     fn draw_mario(&self, ctx: &mut Context, x: f64, y: f64) {
-        // Mario body (simplified)
-        ctx.draw(&Circle {
-            x,
-            y: y + 3.0,
-            radius: 3.0,
-            color: Color::Red,
+        // ASCII-style cat based on:
+        //     ^~^  
+        // _  ('Y') 
+        //  \ /   \
+        //   (\|||/)
+
+        // Ears: ^~^
+        // Left ear ^
+        ctx.draw(&Line {
+            x1: x - 3.0,
+            y1: y + 12.0,
+            x2: x - 2.0,
+            y2: y + 14.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x - 2.0,
+            y1: y + 14.0,
+            x2: x - 1.0,
+            y2: y + 12.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        
+        // Middle ~
+        ctx.draw(&Line {
+            x1: x - 0.5,
+            y1: y + 13.0,
+            x2: x + 0.5,
+            y2: y + 12.5,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        
+        // Right ear ^
+        ctx.draw(&Line {
+            x1: x + 1.0,
+            y1: y + 12.0,
+            x2: x + 2.0,
+            y2: y + 14.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x + 2.0,
+            y1: y + 14.0,
+            x2: x + 3.0,
+            y2: y + 12.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
         });
 
-        // Mario head
-        ctx.draw(&Circle {
-            x,
-            y: y + 7.0,
-            radius: 2.5,
-            color: Color::Rgb(255, 220, 177), // Skin color
+        // Face outline: ('Y')
+        // Left parenthesis (
+        ctx.draw(&Line {
+            x1: x - 2.5,
+            y1: y + 11.0,
+            x2: x - 3.0,
+            y2: y + 9.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x - 3.0,
+            y1: y + 9.0,
+            x2: x - 2.5,
+            y2: y + 7.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        
+        // Right parenthesis )
+        ctx.draw(&Line {
+            x1: x + 2.5,
+            y1: y + 11.0,
+            x2: x + 3.0,
+            y2: y + 9.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x + 3.0,
+            y1: y + 9.0,
+            x2: x + 2.5,
+            y2: y + 7.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
         });
 
-        // Mario hat
-        ctx.draw(&Circle {
-            x,
-            y: y + 8.5,
-            radius: 2.0,
-            color: Color::Red,
+        // Eyes: apostrophes ' '
+        ctx.draw(&Line {
+            x1: x - 1.0,
+            y1: y + 10.0,
+            x2: x - 0.8,
+            y2: y + 9.5,
+            color: Color::Black,
+        });
+        ctx.draw(&Line {
+            x1: x + 0.8,
+            y1: y + 10.0,
+            x2: x + 1.0,
+            y2: y + 9.5,
+            color: Color::Black,
         });
 
-        // Mario legs (simple lines) - walking animation
-        if self.animation_frame % 10 < 5 {
-            // Walking animation - leg positions
-            ctx.draw(&Line {
-                x1: x - 1.0,
-                y1: y,
-                x2: x - 2.0,
-                y2: y - 3.0,
-                color: Color::Blue,
-            });
-            ctx.draw(&Line {
-                x1: x + 1.0,
-                y1: y,
-                x2: x + 2.0,
-                y2: y - 2.0,
-                color: Color::Blue,
-            });
-        } else {
-            ctx.draw(&Line {
-                x1: x - 1.0,
-                y1: y,
-                x2: x - 1.5,
-                y2: y - 2.0,
-                color: Color::Blue,
-            });
-            ctx.draw(&Line {
-                x1: x + 1.0,
-                y1: y,
-                x2: x + 1.5,
-                y2: y - 3.0,
-                color: Color::Blue,
-            });
-        }
+        // Nose and mouth: Y
+        // Y top left
+        ctx.draw(&Line {
+            x1: x - 0.5,
+            y1: y + 8.5,
+            x2: x,
+            y2: y + 8.0,
+            color: Color::Rgb(255, 182, 193), // Light pink
+        });
+        // Y top right
+        ctx.draw(&Line {
+            x1: x + 0.5,
+            y1: y + 8.5,
+            x2: x,
+            y2: y + 8.0,
+            color: Color::Rgb(255, 182, 193), // Light pink
+        });
+        // Y bottom
+        ctx.draw(&Line {
+            x1: x,
+            y1: y + 8.0,
+            x2: x,
+            y2: y + 7.0,
+            color: Color::Rgb(255, 182, 193), // Light pink
+        });
+
+        // Body outline: \ /   \
+        // Left side \
+        ctx.draw(&Line {
+            x1: x - 2.0,
+            y1: y + 6.0,
+            x2: x - 4.0,
+            y2: y + 2.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        // Right side /
+        ctx.draw(&Line {
+            x1: x + 2.0,
+            y1: y + 6.0,
+            x2: x + 4.0,
+            y2: y + 2.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+
+        // Legs: (\|||/)
+        // Left parenthesis (
+        ctx.draw(&Line {
+            x1: x - 3.5,
+            y1: y + 2.0,
+            x2: x - 4.0,
+            y2: y,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x - 4.0,
+            y1: y,
+            x2: x - 3.5,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+
+        // Right parenthesis )
+        ctx.draw(&Line {
+            x1: x + 3.5,
+            y1: y + 2.0,
+            x2: x + 4.0,
+            y2: y,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+        ctx.draw(&Line {
+            x1: x + 4.0,
+            y1: y,
+            x2: x + 3.5,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 150), // Light yellow
+        });
+
+        // Four legs: \|||/
+        // Left leg \
+        ctx.draw(&Line {
+            x1: x - 2.0,
+            y1: y + 1.0,
+            x2: x - 3.0,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 200), // Pale yellow/white
+        });
+        // Center legs |||
+        ctx.draw(&Line {
+            x1: x - 0.5,
+            y1: y + 1.0,
+            x2: x - 0.5,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 200), // Pale yellow/white
+        });
+        ctx.draw(&Line {
+            x1: x,
+            y1: y + 1.0,
+            x2: x,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 200), // Pale yellow/white
+        });
+        ctx.draw(&Line {
+            x1: x + 0.5,
+            y1: y + 1.0,
+            x2: x + 0.5,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 200), // Pale yellow/white
+        });
+        // Right leg /
+        ctx.draw(&Line {
+            x1: x + 2.0,
+            y1: y + 1.0,
+            x2: x + 3.0,
+            y2: y - 2.0,
+            color: Color::Rgb(255, 255, 200), // Pale yellow/white
+        });
+
+        // Paws (small circles at leg ends)
+        ctx.draw(&Circle {
+            x: x - 3.0,
+            y: y - 2.0,
+            radius: 0.4,
+            color: Color::Rgb(255, 192, 203), // Pink paws
+        });
+        ctx.draw(&Circle {
+            x: x - 0.5,
+            y: y - 2.0,
+            radius: 0.4,
+            color: Color::Rgb(255, 192, 203), // Pink paws
+        });
+        ctx.draw(&Circle {
+            x: x,
+            y: y - 2.0,
+            radius: 0.4,
+            color: Color::Rgb(255, 192, 203), // Pink paws
+        });
+        ctx.draw(&Circle {
+            x: x + 0.5,
+            y: y - 2.0,
+            radius: 0.4,
+            color: Color::Rgb(255, 192, 203), // Pink paws
+        });
+        ctx.draw(&Circle {
+            x: x + 3.0,
+            y: y - 2.0,
+            radius: 0.4,
+            color: Color::Rgb(255, 192, 203), // Pink paws
+        });
+
+        // Tail (simple curved behind)
+        let tail_sway = if self.animation_frame % 20 < 10 { 0.5 } else { -0.5 };
+        ctx.draw(&Line {
+            x1: x - 3.5,
+            y1: y + 3.0,
+            x2: x - 5.0 + tail_sway,
+            y2: y + 6.0,
+            color: Color::Rgb(255, 255, 120), // Slightly darker yellow
+        });
+        ctx.draw(&Line {
+            x1: x - 5.0 + tail_sway,
+            y1: y + 6.0,
+            x2: x - 4.0 + tail_sway,
+            y2: y + 9.0,
+            color: Color::Rgb(255, 255, 120), // Slightly darker yellow
+        });
     }
 
-    fn draw_mushroom(&self, ctx: &mut Context, x: f64, y: f64) {
-        // Mushroom cap
+    fn draw_tomato(&self, ctx: &mut Context, x: f64, y: f64) {
+        // Tomato body (main red circle)
         ctx.draw(&Circle {
             x,
-            y: y + 2.0,
+            y: y + 1.0,
             radius: 4.0,
             color: Color::Red,
         });
 
-        // Mushroom spots
+        // Tomato shine/highlight
         ctx.draw(&Circle {
-            x: x - 2.0,
-            y: y + 3.0,
-            radius: 0.8,
-            color: Color::White,
-        });
-        ctx.draw(&Circle {
-            x: x + 1.5,
+            x: x - 1.5,
             y: y + 2.5,
-            radius: 0.6,
-            color: Color::White,
+            radius: 0.8,
+            color: Color::Rgb(255, 100, 100), // Lighter red
         });
 
-        // Mushroom stem
-        ctx.draw(&Rectangle {
+        // Tomato leaves/stem (green top)
+        ctx.draw(&Circle {
             x: x - 1.0,
-            y: y - 2.0,
-            width: 2.0,
-            height: 4.0,
-            color: Color::Rgb(255, 248, 220), // Beige
+            y: y + 4.0,
+            radius: 0.6,
+            color: Color::Green,
+        });
+        ctx.draw(&Circle {
+            x,
+            y: y + 4.5,
+            radius: 0.5,
+            color: Color::Green,
+        });
+        ctx.draw(&Circle {
+            x: x + 1.0,
+            y: y + 4.0,
+            radius: 0.6,
+            color: Color::Green,
         });
     }
 

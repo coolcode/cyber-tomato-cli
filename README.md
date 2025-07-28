@@ -31,7 +31,7 @@ A minimalist terminal-based pomodoro application built with Rust, featuring ASCI
 
 ### Keyboard-Driven Interface
 - **Lightning-fast Controls**: All functions accessible via single keypresses
-- **Interactive Help**: Press **X** for comprehensive controls popup
+- **Interactive Help**: Press **x** for comprehensive controls popup
 - **Custom Timer Input**: Intuitive dialog with format validation and examples
 
 ## Quick Start
@@ -58,20 +58,20 @@ cargo build --release
 
 ## Controls
 
-> **Tip**: Press **X** anytime to view the interactive controls popup!
+> **Tip**: Press **x** anytime to view the interactive controls popup!
 
 ### Essential Keys
 
 | Key | Action | Description |
 |-----|--------|-------------|
-| `W` | Start Work Session | Begin 25-minute work period |
-| `B` | Start Break Session | Begin 5-minute break period |
-| `C` | Custom Timer | Open custom timer input dialog |
+| `w` | Start Work Session | Begin 25-minute work period |
+| `b` | Start Break Session | Begin 5-minute break period |
+| `c` | Custom Timer | Open custom timer input dialog |
 | `Space`/`Enter` | Pause/Resume | Toggle timer pause state |
-| `T` | Toggle Mode | Switch between Manual/Auto modes |
-| `M` | Mario Animation | Trigger Mario animation (for testing) |
-| `X` | Help | Show/hide controls popup |
-| `Esc` | Exit | Quit application |
+| `t` | Toggle Mode | Switch between Manual/Auto modes |
+| `m` | Mario Animation | Trigger Mario animation (for testing) |
+| `x` | Help | Show/hide controls popup |
+| `q/Esc` | Exit | Quit application |
 
 ### Custom Timer Format
 
@@ -96,7 +96,7 @@ CYBER TOMATO features a clean, bordered interface:
 │ ███████████████████████░░░ 85%  │  ← Progress Bar
 ├─────────────────────────────────┤
 │ Mode: Auto | Status: Working    │  ← Status & Help
-│ Done: 5 | X: Help               │
+│ Done: 5 | x: Help               │
 └─────────────────────────────────┘
 ```
 
@@ -197,4 +197,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with Claude Code**
 
-*Perfect your productivity with the timeless pomodoro technique, enhanced by retro gaming charm and modern Rust performance.*
+  ASCII Cat Design:
+
+```bash
+      ^~^     ← Ears (triangular ears with wavy middle)
+  _  ('Y')    ← Face outline with apostrophe eyes and Y-shaped nose/mouth
+   \ /   \    ← Body outline (shoulders tapering down)
+    (\|||/)   ← Legs in parentheses with 4 vertical legs (\|||/)
+```

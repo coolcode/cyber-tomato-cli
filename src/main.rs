@@ -381,7 +381,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             "  Mode: {} | Status: {} | Done: {} | ",
             mode_text, status_text, timer.completed_sessions
         )),
-        Span::styled("X", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+        Span::styled("x", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
         Span::raw(": Help  "),
     ])])
     .alignment(Alignment::Left)
@@ -403,35 +403,35 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             Line::from(vec![Span::styled("CONTROLS", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD))]).alignment(Alignment::Center),
             Line::from(""),
             Line::from(vec![
-                Span::styled(" W  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("  w  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Start 25 mins Work"),
             ]),
             Line::from(vec![
-                Span::styled(" B  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("  b  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Start 5 mins Break"),
             ]),
             Line::from(vec![
-                Span::styled(" C  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("  c  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Custom timer"),
             ]),
             Line::from(vec![
-                Span::styled(" ␣/↵", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled(" ␣/↵ ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Pause/Resume timer"),
             ]),
             Line::from(vec![
-                Span::styled(" T  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("  t  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Toggle Manual/Auto mode"),
             ]),
             Line::from(vec![
-                Span::styled(" M  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("  m  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Mario animation"),
             ]),
             Line::from(vec![
-                Span::styled(" X  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("Esc  ", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Close this popup"),
             ]),
             Line::from(vec![
-                Span::styled(" Esc", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("q/Esc", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Exit application"),
             ]),
         ])
@@ -480,7 +480,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             Line::from(vec![
                 Span::styled("↵", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Confirm | "),
-                Span::styled("X", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
+                Span::styled("x", Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD)),
                 Span::raw(" - Cancel"),
             ]),
         ])
@@ -623,8 +623,22 @@ fn main_loop(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, timer: &mut 
                 }
 
                 match key {
+                    // Handle help popup ESC to close popup
                     KeyEvent {
                         code: KeyCode::Esc,
+                        modifiers: KeyModifiers::NONE,
+                        ..
+                    } => {
+                        if timer.show_controls_popup {
+                            timer.show_controls_popup = false;
+                        } else {
+                            break; // Exit app if no popup is open
+                        }
+                    }
+                    
+                    // Quit with 'q' or Ctrl+C
+                    KeyEvent {
+                        code: KeyCode::Char('q'),
                         modifiers: KeyModifiers::NONE,
                         ..
                     }
