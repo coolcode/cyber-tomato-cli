@@ -46,7 +46,7 @@ struct PomodoroSession {
 }
 
 const HIGHLIGHT_COLOR: Color = Color::Rgb(0, 255, 150);
-const PRIMARY_COLOR: Color = Color::Rgb(144, 255, 161); //Color::Rgb(80,250,123);
+const PRIMARY_COLOR: Color = Color::LightGreen; // Color::Rgb(144, 255, 161); //Color::Rgb(80,250,123);
 
 fn set_terminal_title(title: &str) {
     print!("\x1b]0;{title}\x07");
@@ -338,7 +338,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
             .borders(Borders::ALL)
             .title("")
             .border_style(Style::default().fg(PRIMARY_COLOR)),
-    );
+    );  
 
     f.render_widget(countdown_paragraph, chunks[1]);
 
@@ -350,7 +350,7 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
         0.0
     };
 
-    let progress_label = Span::styled(format!("{:.1}%", progress_ratio * 100.0), Style::default().fg(Color::White));
+    let progress_label = Span::styled(format!(" {:.0}% ", progress_ratio * 100.0), Style::default().fg(timer_color).bg(Color::default()));
 
     let progress_bar = Gauge::default()
         .block(
@@ -359,7 +359,8 @@ fn ui(f: &mut Frame, timer: &PomodoroTimer) {
                 .title("Progress")
                 .border_style(Style::default().fg(PRIMARY_COLOR)),
         )
-        .gauge_style(Style::default().fg(timer_color))
+        .gauge_style(Style::default().fg(PRIMARY_COLOR).bg(Color::default())) //.fg(timer_color).bg(Color::default())
+        
         .ratio(progress_ratio)
         .label(progress_label);
     f.render_widget(progress_bar, chunks[2]);
